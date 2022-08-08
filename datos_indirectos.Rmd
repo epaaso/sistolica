@@ -1,0 +1,98 @@
+---
+title: "Investigacion Cercardio"
+output: html_document
+---
+
+
+
+```{r}
+library(readxl)
+
+consulta <- list()
+for (x in 1:4) {
+  consulta[[x]] <- read_excel("CERCARDIO_inv _interna_DIAGNOSTICOS.xlsx", 
+    sheet = paste0("Consulta ", x))
+}
+
+
+```
+
+
+```{r}
+library("tidyverse")
+consulta1 <- consulta[[1]]
+consulta2 <- consulta[[2]]
+consulta3 <- consulta[[3]]
+consulta4 <- consulta[[4]]
+
+consulta4 <- consulta4 %>% filter(!is.na(peso))
+nombres <- consulta4$paciente
+
+consulta4 <- consulta4 %>% filter(paciente %in% nombres)
+consulta3 <- consulta3 %>% filter(paciente %in% nombres)
+consulta2 <- consulta2 %>% filter(paciente %in% nombres)
+consulta1 <- consulta1 %>% filter(paciente %in% nombres)
+
+
+```
+
+```{r}
+consulta4 <- consulta4 %>% separate(presion, sep = "/",
+into = c("sistolica", "diastolica"))
+
+consulta3 <- consulta3 %>% separate(presion, sep = "/",
+into = c("sistolica", "diastolica"))
+
+consulta2 <- consulta2 %>% separate(presion, sep = "/",
+into = c("sistolica", "diastolica"))
+
+consulta1 <- consulta1 %>% separate(presion, sep = "/",
+into = c("sistolica", "diastolica"))
+```
+
+```{r}
+
+consulta1 <- consulta1 %>% select(paciente, sistolica)
+consulta2 <- consulta2 %>% select(paciente, sistolica)
+consulta3 <- consulta3 %>% select(paciente, sistolica)
+consulta4 <- consulta4 %>% select(paciente, sistolica)
+
+presion_dinamica <- consulta1 %>% left_join(consulta2,  by = c("paciente"), suffix = c("1","2"))
+
+presion_dinamica <- presion_dinamica %>% left_join(consulta3,  by = c("paciente")) %>% rename(sistolica3 = sistolica)
+
+presion_dinamica <- presion_dinamica %>% left_join(consulta4,  by = c("paciente")) %>% rename(sistolica4 = sistolica)
+
+```
+
+```{r}
+
+presion_dinamica.mtx <- as.matrix(presion_dinamica)
+presion_dinamica <- t(presion_dinamica.mtx)
+presion_dinamica <- as.data.frame(presion_dinamica)
+my.names <- presion_dinamica[1,]
+colnames(presion_dinamica) <- my.names
+presion_dinamica <- presion_dinamica[-1,] 
+
+presion_dinamica$tiempo <- 1:4
+
+prueba <- pivot_longer(presion_dinamica, cols = 1:14, names_to ="paciente",
+values_to = "sistolica")
+prueba$tiempo <- as.numeric(prueba$tiempo)
+prueba$sistolica <- as.numeric(prueba$sistolica)
+```
+
+```{r}
+prueba %>% 
+  ggplot(aes(x = tiempo, y = sistolica, colour = paciente)) + geom_path()
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
